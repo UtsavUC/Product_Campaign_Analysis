@@ -1,0 +1,797 @@
+---
+title: 'Customer Response to Promotions: The Complete Journey'
+author: Nick Glass, Utsav Raj, Ayush Paliwal, Raj Misal
+output:
+ rmarkdown::html_document:
+    theme: lumen
+---
+
+#### _An in-depth analysis to measure the effectiveness of promotions and how they influence the customer's buying patterns. The analysis also encompasses the demographic analysis, sales analysis and the product sales effectiveness to the promotions._
+
+
+
+## Content {.tabset}
+
+
+### **1. Introduction**
+
+
+The research is based on the the effectiveness of a promotion - Type A. The goal of the study is to derive insights from the available ‘Customer Full Journey’ datasets relating to customers, transactions, and how these factors influence the sales when the promotion was active. As part of our methodology we plan to clean, tidy, explore, and analyze the datasets we received to finally answer the following questions of interest -
+
+**Question #1: Was the customer responsive to the promotion/campaign ran during a specific period?**
+
+**Question #2: Was holiday a driver of sales or was it the promotion that helped in acquiring new customer, retaining existing customer and overall increasing customer enagement?**
+
+**Question #3: To what degree was the promotion effective?**
+
+**Question #4: How were the customer purchase pattern different when the promotion was active VS. when the promotion was inactive?**
+
+**Question #5: What was the Expenditure Per Hour (EPH) when the promotion was active VS. when the promotion was inactive?**
+
+**Question #6: What are the common demographics of the customers who displayed disparate purchasing pattern when the promotion was active VS. when the promotion was inactive?**
+
+**Question #7: What are the top product categories that experienced uptick/decline in sales and sales volume?**
+
+
+Our methodology can be broadly classified into three steps -
+
+**Data cleaning:** Clean and tidy the tables/datasets in R, and make data ready for analysis
+
+**Data Exploration:** Explore the nature and source of data, explore missing values and reasons ; identify abnormal values and outliers, and visualize variable distributions.
+
+**Data Analysis:** Applying relevant joins, filters, aggregation methods and calculations to derive KPIs and effective measure to derive meaningful insights. We propose a comparative analysis of sales and sales volume, followed by descriptive insights on the demographics and products.
+
+This research will help the client in two major ways. Firstly, understand better as to what factors impact the success of a promotion and better understand the demographics and product category influenced by the promotion. The insights can be further used to hyperpersonalize marketing initiatives to target specific customer segment in the future. Secondly, design better promotions against different product types and demographic features of the customers powered by the knowledge of customer engagement (and spending) levels with various product categories.
+
+### **2. Packages**
+
+Packages to be installed
+
+
+Following Packages are needed for the project-
+
+
+**completejourney -** Retail shopping transactions for 2,469 households over one year;\
+**tidyverse - ** Included for data tidying ; Functions-To use gather and spread function\
+**ggplot2 - **To create Data Visualizations  \
+**plotly - **To create Data Visualizations  \
+**patchwork - **To combine separate ggplots into the same graphic  \
+**lubridate - **To analyse Date-Time data  \
+**viridis - **To use different color palettes \
+**knitr - ** To do formatting in R markdown  \
+**kableExtra - **To do formatting in R markdown \
+**reshape2 - ** To reshape data \
+**ggalluvial - **To produce alluvial plots in a tidyverse framework \
+
+
+```{r}
+suppressWarnings(suppressMessages(library(completejourney)))
+suppressWarnings(suppressMessages(library(tidyverse)))
+suppressWarnings(suppressMessages(library(plotly)))
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(patchwork)))
+suppressWarnings(suppressMessages(library(lubridate)))
+suppressWarnings(suppressMessages(library(viridis)))
+suppressWarnings(suppressMessages(library(reshape2)))
+suppressWarnings(suppressMessages(library(ggalluvial)))
+```
+
+
+### **3. Data Sources & Pre-Processing**
+
+
+**3.1. Data Source :** The original data on the retail client was downloaded from the Data Wrangling course folders
+
+
+**3.2.1 Introduction of source data: ** The dataset primarily tracks the transaction level data from 2,500 households who frequently shop at the client’s stores. Moreover, the data captures purchases made across the entire gamut of product categories available at the retailer’s stores. Among other important information, we have customer demographics data and direct marketing campaigns data available for certain households. (Please Note: The terms ‘Customer’ and ‘Household’ have been assumed synonymous and used interchangeably in this report)
+
+
+**Timeline:** The data tracks customer transactions over a period of one year (52 weeks).
+
+
+**3.2.2 Explanation of source data: (tables and variables) In total, this comprehensive total customer journey had 8 different data frames. Each of these are described in brief below. Also a small glimpse into each of these data is given below**
+
+
+**a) campaigns:** campaigns received by each household
+
+
+```{r echo=FALSE}
+suppressWarnings(suppressMessages(library(kableExtra)))
+campaigns %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+**b) campaign_descriptions:** campaign metadata (length of time active)
+
+
+```{r echo=FALSE}
+campaign_descriptions %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+**c) coupons:** coupon metadata (UPC code, campaign, etc.)
+
+
+```{r echo=FALSE}
+coupons %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+**d) coupon_redemptions:** coupon redemptions (household, day, UPC code, campaign)
+
+
+```{r echo=FALSE}
+coupons %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+**e) demographics:** household demographic data (age, income, family size, etc.)
+
+
+```{r echo=FALSE}
+demographics %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+
+```
+
+
+**f) products:** product metadata (brand, description, etc.)
+
+
+```{r echo=FALSE}
+products %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+**g) promotions_sample:** a sampling of the product placement in mailers and in stores corresponding to advertising campaigns
+
+
+```{r echo=FALSE}
+promotions_sample %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+**h) transactions_sample:** a sampling of the products purchased by households
+
+
+```{r echo=FALSE}
+transactions_sample %>% 
+  head(5) %>% 
+  kbl() %>%
+  kable_styling()
+```
+
+
+### **4. Data Preparation**
+
+
+**4.1 Tables of concern for Problem #1:**
+
+
+**- transactions data**\
+**- campaign_descriptions data**\
+**- coupons_redemption data**\
+**- products data**\
+
+
+**4.2 Data Preparation for insight generation:**
+
+
+**a. Joining datasets**
+
+
+- Join the transactions, coupons and campaign_desc tables
+- filtering out null values after the join as they represent mismatched timestamps
+- transactions displayed where Campaign A was effective VS. transactions without promotion period
+
+
+```{r}
+transactions <- get_transactions()
+promotions <- get_promotions()
+
+transactions <- transactions %>%
+  mutate(transaction_date = as.Date(transactions$transaction_timestamp))
+
+coupon_redemptions <- coupon_redemptions %>%
+  left_join(campaign_descriptions, by = "campaign_id") %>%
+  full_join(coupons, by = c("coupon_upc", "campaign_id"))
+
+transactions_involving_coupons <- transactions %>%
+  left_join(coupon_redemptions, by = c("household_id", "product_id", "transaction_date" = "redemption_date")) %>%
+  filter(!is.na(campaign_id))
+
+transactions_involving_coupons%>% 
+  glimpse() 
+
+
+```
+
+
+**b. Further data preparation for comparative analysis, analyzing customer purchase pattern, and product sales**
+
+
+```{r include=FALSE}
+
+campaign_df_clean <- transactions_involving_coupons %>%
+  filter(!(basket_id %in% c(32759302576,41297606588,40727747221,41297300683,
+                            35464052709,35145556678)))
+
+campaign_df_outliers <- transactions_involving_coupons %>%
+  mutate(Campaign = case_when(campaign_type == "Type A" ~ "Campaign A",
+                                              TRUE ~ "Not Campaign A")) %>%
+  group_by(basket_id,Campaign) %>%
+  summarise(Sales_Volume = sum(quantity, na.rm = TRUE), Total_Sales = sum(sales_value, na.rm = TRUE)) %>%
+  arrange(desc(Total_Sales))
+
+campaign_df <- campaign_df_clean %>%
+  mutate(Campaign = case_when(campaign_type == "Type A" ~ "Campaign A",
+                              TRUE ~ "Not Campaign A")) %>%
+  group_by(basket_id,Campaign) %>%
+  summarise(Sales_Volume = sum(quantity, na.rm = TRUE), Total_Sales = sum(sales_value, na.rm = TRUE)) %>%
+  arrange(desc(Total_Sales))
+
+```
+
+```{r}
+campaign_df %>% 
+  filter(Campaign == "Not Campaign A") %>%
+  arrange(desc(Total_Sales)) %>% 
+  head(10) %>% 
+  kbl() %>%
+  kable_styling()
+
+campaign_df %>% 
+  filter(Campaign == "Not Campaign A") %>%
+  summary() %>% 
+  kbl() %>%
+  kable_styling()
+
+```
+
+
+**Note**
+
+**- Total Rows & Columns:** 155,4 (respectively)\
+**- Total Sales:** Depict the total sales with corresponding to each basket ID\
+**- Sales Volume:** Depict the quantity purchased corresponding to each basket ID\
+
+
+**c. Calculation of Expenditure per Hour:**
+
+
+**Expenditure Per Hour** (EPH) is a measure coefficient to measure how effective was the sales for a given period of time. The duration can be defined as the time when the promotion campaign was active or the time when there was no promotion active. We have considered EPH on hourly basis to calculate dollar value per hour. EPH is derived by the following formula:
+
+$\sum (No. of Transactions)/\sum (Total duration)$
+
+**After joining different tables and grouping the aggregation algorithm, we have considered unique households that shopped when Campaign A was active and the same set that shopped where there was no promotion in place. We agreed that EPH would be the best indicator of sales in both the periods (Campaign A active Vs. Not Active) only when we consider unique households that shopped during both the duration.**
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+transactions_eph <- campaign_df_clean %>%
+  mutate(Campaign = case_when(campaign_type == "Type A" ~ "Campaign A",
+                              TRUE ~ "Not Campaign A"),
+         Month = month(transaction_timestamp),
+         Holiday = case_when(Month %in% c(10,11,12,1) ~ "Holiday Season",
+                             TRUE ~ "Not Holiday Season")) %>%
+  group_by(household_id,Campaign,Holiday,transaction_date) %>%
+  summarise(Total_Sales = sum(sales_value, na.rm = T)) %>%
+  group_by(household_id,Campaign,Holiday) %>%
+  summarise(eph = mean(Total_Sales, na.rm = T)/24) %>%
+  select(household_id,Campaign,Holiday,eph)
+  transactions_eph %>% 
+  head(10) %>% 
+    kbl() %>%
+  kable_styling()
+
+```
+
+**c. Calculation of Average Basket Value**
+
+**Average basket Value:** Average basket value, also known as units per transaction, refers to the average number of items sold per single transaction. This is calculated by dividing the total value of all transactions by the number of transactions or sales. 
+
+$\sum (Total Value of Transactions)/\sum (NumberofTransactions)$
+
+
+**d. Campaign Durations**
+
+
+Campaign Durations are listed below:
+
+
+**Campaign A** ran for total 196 days. With each duration listed below:
+
+
+```{r}
+campaign_descriptions %>%
+  filter(campaign_type == "Type A") %>%
+  mutate(date_diff = as.numeric(difftime(end_date, start_date, units = "days"))) %>% 
+     kbl() %>%
+  kable_styling()
+```
+
+
+**Campaign A was inactive** for all the other days when Campaign A was active.
+
+
+**_Campaign A Inactive Duration =_** 365 - 196 = **169**
+
+
+### **5. Promotion Analysis**   
+
+**5.1 Analysis**
+
+**a. Outlier Detection on transactions when Campaign A was Active VS. No Promotion Period**
+
+- The first plot depicts the total sales distribution by when the Campaign A was running vs. when Campaign A was inactive. 
+
+- We have also observed some outlier transactions which were exorbitantly large in both the periods. We perceive these transactions which were not driven by any promotion/campaign and could be driven by other factors.
+
+- The reader might remember that this dataset in the one we prepared (using wrangling procedures) in our data preparation section.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+campaign_df_outliers %>%
+  ggplot(aes(x=Campaign,y=Total_Sales)) +
+  geom_boxplot(color="#8DA2BC", fill="#8DA2BC",alpha=0.95) +
+  ggtitle("Outlier Transaction in both the durations ") +
+  labs(x="Type",y="Total Sales in Dollars",
+       caption = "Data source: Completejourney") +
+  theme(plot.title = element_text(family="Arial",color="black",size=14,face="bold.italic"),
+        axis.title.y=element_text(family="Arial",face="plain",color="black",size=14),
+        axis.title.x=element_text(family="Arial",face="plain",color="black",size=14),
+        legend.title = element_text(family="Arial",face="bold",colour="black",size=10),
+        axis.text.y=element_text(family="Arial",face="bold",color="black",size=8),
+        axis.text.x=element_text(family="Arial",face="bold",color="black",size=8),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        panel.background=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank())
+
+```
+
+**b. Analyzing total sales in campaign A vs. when campaign A was inactive by holiday season**
+
+- Further we have also analyzed the sales during the holiday season, as holiday is one of the biggest drivers of sale. To rule out the hypothesis that higher sales (when campaign A was running) could have been due to the holiday season, we did a comparative analysis of sales in Campaign A during the holiday season and during normal period.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+campaign_df2 <- campaign_df_clean %>%
+  mutate(campaign = case_when(campaign_type == "Type A" ~ "Campaign A",
+                              TRUE ~ "Not Campaign A"),
+         Month = month(transaction_timestamp),
+         Holiday = case_when(Month %in% c(10,11,12,1) ~ "Holiday Season",
+                             TRUE ~ "Not Holiday Season")) %>%
+  group_by(basket_id,campaign,Holiday) %>%
+  summarise(Sales_Volume = sum(quantity, na.rm = TRUE), Total_Sales = sum(sales_value, na.rm = TRUE)) 
+
+campaign_df2
+```
+
+
+```{r Violin Plot 1, echo=FALSE, message=FALSE, warning=FALSE}
+campaign_df2 %>%
+  ggplot(aes(x=Holiday,y=Total_Sales,fill=Holiday)) + 
+  geom_violin(alpha=0.95) +
+  geom_boxplot(width=0.05, fill="black", outlier.color = NA) + 
+  stat_summary(fun = median,geom="point",fill="white",size=2.5,shape=21) +
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) +
+  ggtitle("Total Sales by Campaign Type & Holiday ") +
+  labs(x="Time of Year", y="Total Sales", fill="Time of Year",
+       caption = "Data source: Completejourney") +
+  scale_y_continuous(n.breaks = 5, labels= scales::dollar, limits = c(0, 40)) +
+  theme(plot.title = element_text(family="Arial",color="black",size=14,face="bold.italic"),
+        axis.title.y=element_text(family="Arial",face="plain",color="black",size=14),
+        legend.title = element_text(family="Arial",face="bold",colour="black",size=10),
+        axis.text.y=element_text(family="Arial",face="bold",color="black",size=8),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        panel.background=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank(),
+        legend.position = "right",
+        legend.background = element_rect(fill = "white")) +
+  facet_wrap(~campaign)
+```
+
+**Distribution of total sales by basket id with the median value shown as a white dot. can be seen that the distribution was even throughout the year for campaign A. The distribution when campaign A was not running did not have as strong of a tail.** 
+
+
+**c. Analyzing sales volume in campaign A vs. when campaign A was inactive by holiday season**
+
+- Also total sales might not be the correct representation of sales as we are in the promotion period where many products are sold on a discounted price, BOGO or multi-save and conditional promos.
+
+- Hence, we did a comparative analysis on Sales Volume (dollar per unit) in Campaign A during the holiday season and during normal period.
+
+
+```{r Violin Plot 2, echo=FALSE, message=FALSE, warning=FALSE}
+campaign_df2 %>%
+  ggplot(aes(x=Holiday,y=Sales_Volume,fill=Holiday)) + 
+  geom_violin(alpha=0.95) +
+  geom_boxplot(width=0.05, fill="black", outlier.color = NA) + 
+  stat_summary(fun = median,geom="point",fill="white",size=2.5,shape=21) +
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) +
+  ggtitle("Sales Volume by Campaign Type & Holiday ") +
+  labs(x="Time of Year", y="Sales Volume", fill="Time of Year",
+       caption = "Data source: Completejourney") +
+  scale_y_continuous(n.breaks = 5, limits = c(0, 40)) +
+  theme(plot.title = element_text(family="Arial",color="black",size=14,face="bold.italic"),
+        axis.title.y=element_text(family="Arial",face="plain",color="black",size=14),
+        legend.title = element_text(family="Arial",face="bold",colour="black",size=10),
+        axis.text.y=element_text(family="Arial",face="bold",color="black",size=8),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        panel.background=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank(),
+        legend.position = "right",
+        legend.background = element_rect(fill = "white")) +
+  facet_wrap(~campaign)
+```
+
+**Distribution of sales volume by basket id with the median value shown as a white dot. It can be seen that the distribution was even throughout the year for campaign A. The distribution for campaign A was much more spread out than the other campaigns.**
+
+**e. Analyzing total sales and sales volume when Campaign A was running VS. when Campaign A was inactive**
+
+
+
+```{r Density Contour, echo=FALSE, message=FALSE, warning=FALSE}
+campaign_df %>%
+  ggplot(aes(x=Sales_Volume,y=Total_Sales)) +                 
+  geom_point(color="#8DA2BC", fill="#8DA2BC",alpha=0.2) + 
+  scale_x_continuous(breaks=c(0,10,20,30)) +
+  scale_y_continuous(labels= scales::dollar,breaks=c(0,20,40,60,80,100,120,140,160)) +
+  stat_density_2d(aes(fill=stat(level)),geom="polygon",bins=75) +
+  facet_wrap(~Campaign) +   
+  scale_fill_viridis(option = "D") +
+  ggtitle("Density Contour of Sales Volume and Total Sales by Campaign")           +
+  labs(x="Sales Volume", y="Total Sales", fill="Level",
+       caption = "Data source: Completejourney") +
+  theme(plot.title = element_text(family="Arial",color="black",size=14,face="bold.italic"),
+        axis.title.x=element_text(family="Arial",face="plain",color="black",size=14),
+        axis.title.y=element_text(family="Arial",face="plain",color="black",size=14),
+        legend.title = element_text(family="Arial",face="bold",color="black",size=10),
+        axis.text.x=element_text(family="Arial",face="bold",color="black",size=8),
+        axis.text.y=element_text(family="Arial",face="bold",color="black",size=8),
+        panel.background=element_rect(fill = "White"),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size = 1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank())
+```
+
+**The data was grouped by basket in order to examine the distribution. The data was grouped by campaign in order to examine the difference between campaign A and transactions when campaing A was inactive. Most of the sales volume fall between 0 & 20 with the total sales between $0 & $40.**
+
+
+
+**- The above plot clearly shows that total sales and sales volume was relatively higher while in campaign A as compared to when the promotion was inactive.**
+**- The data was grouped by basket ID which is an unique indicator of sales quantity under a transaction** 
+
+
+**5.2 Measure of Promotion Effectiveness**
+
+**a. Expenditure by Hour VS. Time of Year**
+
+
+**Expenditure Per Hour** (EPH) is a measure coefficient to measure how effective was the sales for a given period of time. The duration can be defined as the time when the promotion campaign was active or the time when there was no promotion active. We have considered EPH on hourly basis to calculate dollar value per hour. EPH is derived by the following formula:
+
+$\sum (No. of Transactions)/\sum (Total duration)$
+
+**The calculation of EPH for the dataset is provided in the previous section - "Data Preparation"**
+
+- Generally, a mean EPH of 0.3 and higher for a promotion is considered to be a "successful promotion".\
+- We experienced a mean of 0.53 for Campaign A and 0.13 of mean EPH when campaign A was not running.
+
+```{r EPH Code, echo=FALSE, message=FALSE, warning=FALSE}
+transactions_eph <- campaign_df_clean %>%
+  mutate(Campaign = case_when(campaign_type == "Type A" ~ "Campaign A",
+                              TRUE ~ "Not Campaign A"),
+         Month = month(transaction_timestamp),
+         Holiday = case_when(Month %in% c(10,11,12,1) ~ "Holiday Season",
+                             TRUE ~ "Not Holiday Season")) %>%
+  group_by(household_id,Campaign,Holiday,transaction_date) %>%
+  summarise(Total_Sales = sum(sales_value, na.rm = T)) %>%
+  group_by(household_id,Campaign,Holiday) %>%
+  summarise(eph = mean(Total_Sales, na.rm = T)/24) %>%
+  select(household_id,Campaign,Holiday,eph)
+
+mean(transactions_eph$eph)
+
+```
+
+- Furthermore, we also calculated EPH for transactions in a period where campaign A was not running and we considered both the holiday and the non-holiday season.
+
+```{r EPH Plot, echo=FALSE, message=FALSE, warning=FALSE}
+transactions_eph %>% 
+  ggplot(aes(x=Holiday,y=eph,fill=Holiday)) +
+  geom_bar(stat="identity",position="dodge",alpha=0.95, width=0.90) + 
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) + 
+  ggtitle("EPH by Campaign Type & Time of Year") +
+  labs(x="Time of Year", y="EPH", fill="Time of Year") +
+  theme(plot.title = element_text(family="Arial", color="black", size=14, face="bold.italic"),
+        axis.title.x=element_text(family="Arial", face="plain", color="black", size=14),
+        axis.title.y=element_text(family="Arial", face="plain", color="black", size=14),
+        legend.title = element_text(family="Arial", face="bold", colour="black", size=10),
+        axis.text.x=element_blank(),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.text.y=element_text(family="Arial", face="bold", color="black", size=8),
+        panel.background=element_rect(fill="white"),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank()) +
+  facet_wrap(~Campaign)
+
+```
+
+**- From the above plot it is a clear indication that the major driver of sales were the promotion programs that ran during campaign A. Despite of heavy sales volume experienced in the holiday season, campaign A had a strong mean EPH and higher total sales & sales volume even during the duration when there was no promotion running.**
+
+**5.2 Demographic Deep-Dive Analysis when Campaign A was active vs. inactive**
+
+- Taking a step further, we are analyzing the customer segments that shopped during the campaign period and also when the campaign was inactive.
+- We agreed that the customer segmentation would be best observed in both the periods (Campaign A active Vs. Not Active) only when we consider unique households that shopped during both the duration.
+- We have considered top 3 income range that had most sales against their household IDs.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+campaign_demographic <- campaign_df_clean %>%
+  left_join(demographics, by = "household_id")
+campaign_demographic_sub <- campaign_demographic %>%
+  mutate(Campaign = case_when(campaign_type == "Type A" ~ "Campaign A",
+                       TRUE ~ "Not Campaign A"),
+Month = month(transaction_timestamp),
+Holiday = case_when(Month %in% c(10,11,12,1) ~ "Holiday Season",
+                    TRUE ~ "Not Holiday Season")) %>%
+  select(Campaign,Holiday,home_ownership,income,marital_status,quantity)
+
+glimpse(campaign_demographic_sub)
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+campaign_demographic_sub %>% 
+  group_by(income) %>%
+  summarise(Total_Quantity = sum(quantity,na.rm = TRUE)) %>%
+  arrange(desc(Total_Quantity))
+```
+
+```{r echo=FALSE, message=FALSE, fig.width = 12, fig.height = 6, warning=FALSE}
+campaign_demographic_sub %>% 
+  filter(income %in% c("35-49K","50-74K","75-99K"),
+         home_ownership %in% c("Renter","Homeowner")) %>%
+  ggplot(aes(
+     axis1=Campaign, axis2=income, axis3=home_ownership, axis4=marital_status, axis5=Holiday)) +
+  geom_alluvium(aes(fill = Campaign), alpha=0.9,
+                width = 0, knot.pos = 0, reverse = FALSE) +
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) +
+  guides(fill = FALSE) +
+  geom_stratum(width = 1/8, reverse = FALSE) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+            reverse = FALSE) +
+  scale_x_continuous(breaks = 1:5, labels = c("Campaign", "Income", "Home Ownership", 
+                                              "Marital Status", "Holiday")) +
+  ggtitle("Campaign Breakdown by Demographic") +
+  labs(
+       caption = "Data source: Completejourney") +
+  theme(plot.title = element_text(family="Arial",color="black",size=14,face="bold.italic"),
+        axis.title.y=element_blank(),
+        legend.title = element_text(family="Arial",face="bold",colour="black",size=10),
+        axis.text.y=element_blank(),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.title.x=element_text(family="Arial",face="plain",color="black",size=14),
+        axis.text.x=element_text(family="Arial",face="bold",color="black",size=8),
+        panel.background=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank(),
+        legend.position = "right",
+        legend.background = element_rect(fill = "white"))
+
+```
+
+
+**The demographics are shown as how the relate to the campaign. The blue lines represent campaign A and the green lines represent sales when campaign was inactive.**
+
+**5.3 Product Sales Deep-Dive Analysis when Campaign A was active vs. inactive**
+
+**- Now, once we came to the conclusion that Campaign A was effective in all the sales season, we have further dived a level deeper to analyze the top products that contributed to the sales when Campaign A was active.**
+
+**- We observed that Milk, Frozen Products and Meat were the top contributors towards sales in both the durations.**
+
+**Further, to strengthen our assertion about effectiveness of Campaign A on specific products, we have plotted the Average sales volume per basket for Milk, Frozen Products & Meat. These products have been specifically filtered out by COMMON household_ID as they projected highest sales during both the durations.**
+
+
+
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+campaign_Type_A_df <- transactions_involving_coupons %>%
+  filter(campaign_type == "Type A")
+
+basket_id_Type_A = unique(campaign_Type_A_df$basket_id)
+household_Type_A = unique(campaign_Type_A_df$household_id)
+
+
+top_5_product_category_sales_Type_A = transactions %>%
+  left_join(coupon_redemptions, by = c("household_id", "product_id", "transaction_date" = "redemption_date")) %>%
+  left_join(products, by = "product_id") %>%
+  filter(campaign_type == "Type A") %>%
+  mutate(Category = case_when(product_category %in% c("BEEF","PORK","CHICKEN") ~ "Meat Items",
+                              product_category %in% c("FRZN MEAT/MEAT DINNERS","COLD CEREAL","FROZEN PIZZA")~ "Frozen Items",
+                              product_category %in% c("ICE CREAM/MILK/SHERBTS","FLUID MILK PRODUCTS","CHEESE")~ "Milk Items",
+                              TRUE ~ "Others")) %>%
+  group_by(Category) %>%
+  summarize(sales = sum(sales_value, na.rm = T)) %>%
+  arrange(desc(sales)) %>%
+  slice(1:5)
+  
+
+
+data = transactions %>%
+  left_join(coupon_redemptions, by = c("household_id", "product_id", "transaction_date" = "redemption_date")) %>%
+  left_join(products, by = "product_id") %>%
+  mutate(Category = case_when(product_category %in% c("BEEF","PORK","CHICKEN") ~ "Meat Items",
+                              product_category %in% c("FRZN MEAT/MEAT DINNERS","COLD CEREAL","FROZEN PIZZA")~ "Frozen Items",
+                              product_category %in% c("ICE CREAM/MILK/SHERBTS","FLUID MILK PRODUCTS","CHEESE")~ "Milk Items",
+                              TRUE ~ "Others")) %>%
+  filter(Category %in% c("Meat Items", "Frozen Items", "Milk Items"), household_id %in% household_Type_A) %>%
+  mutate(Campaign = case_when(campaign_type == "Type A" ~ "Campaign A",TRUE ~ "Not Campaign A")) %>%
+  mutate(Holiday = case_when(month(transaction_date) %in% c(10,11,12) ~ "Holiday Season", TRUE ~ "Not Holiday Season")) %>%
+  group_by(basket_id, Holiday, Category) %>%
+  summarise(sales = sum(sales_value, na.rm = T)) %>%
+  pivot_wider(names_from = Category, values_from = sales, values_fill = 0) %>%
+  mutate(Campaign = case_when(basket_id %in% basket_id_Type_A ~ "Campaign A",TRUE ~ "Not Campaign A")) %>%
+  rename("Meat_Items" = "Meat Items") %>%
+  rename("Frozen_Items" = "Frozen Items") %>%
+  rename("Milk_Items" = "Milk Items") %>%
+  group_by(Campaign, Holiday) %>%
+  summarize(Meat_Items = mean(Meat_Items, na.rm = T),
+            Frozen_Items = mean(Frozen_Items, na.rm = T),
+            Milk_Items = mean(Milk_Items, na.rm = T))
+```
+
+**5.3.1 Average Meat Item Sales Per Basket by Campaign Type & Time of Year**
+
+```{r echo=FALSE, out.width= "700px"}
+knitr::include_graphics("/Users/rajmisal/Downloads/Meat.png")
+```
+
+```{r Milk, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+  ggplot(aes(x=Holiday,y=Meat_Items,fill=Holiday)) +
+  geom_bar(stat="identity",position="dodge",alpha=0.95, width=0.90) + 
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) + 
+  scale_y_continuous(labels= scales::dollar) + 
+  labs(x="Time of Year", y="", fill="Time of Year") +
+  theme(plot.title = element_text(family="Arial", color="black", size=14, face="bold.italic"),
+        axis.title.x=element_text(family="Arial", face="plain", color="black", size=14),
+        axis.title.y=element_text(family="Arial", face="plain", color="black", size=14),
+        legend.title = element_text(family="Arial", face="bold", colour="black", size=10),
+        axis.text.x=element_blank(),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.text.y=element_text(family="Arial", face="bold", color="black", size=8),
+        panel.background=element_rect(fill="white"),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank()) +
+  facet_wrap(~Campaign)
+
+```
+
+**5.3.2 Average Frozen Items Sales Per Basket by Campaign Type & Time of Year**
+
+```{r echo=FALSE, out.width= "700px"}
+knitr::include_graphics("/Users/rajmisal/Downloads/Frozen items.png")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+  ggplot(aes(x=Holiday,y=Frozen_Items,fill=Holiday)) +
+  geom_bar(stat="identity",position="dodge",alpha=0.95, width=0.90) + 
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) + 
+  scale_y_continuous(labels= scales::dollar) + 
+  labs(x="Time of Year", y="", fill="Time of Year") +
+  theme(plot.title = element_text(family="Arial", color="black", size=14, face="bold.italic"),
+        axis.title.x=element_text(family="Arial", face="plain", color="black", size=14),
+        axis.title.y=element_text(family="Arial", face="plain", color="black", size=14),
+        legend.title = element_text(family="Arial", face="bold", colour="black", size=10),
+        axis.text.x=element_blank(),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.text.y=element_text(family="Arial", face="bold", color="black", size=8),
+        panel.background=element_rect(fill="white"),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank()) +
+  facet_wrap(~Campaign)
+
+```
+
+**5.3.3 Average Milk Items Sales Per Basket by Campaign Type & Time of Yea**
+
+```{r Milk Image, echo=FALSE, out.width=700}
+knitr::include_graphics("/Users/rajmisal/Downloads/Milk.png")
+```
+
+```{r Milk Plot, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+  ggplot(aes(x=Holiday,y=Milk_Items,fill=Holiday)) +
+  geom_bar(stat="identity",position="dodge",alpha=0.95, width=0.90) + 
+  scale_fill_manual(values=c("#8DA2BC","#F79862")) + 
+  scale_y_continuous(labels= scales::dollar) + 
+  labs(x="Time of Year", y="", fill="Time of Year") +
+  theme(plot.title = element_text(family="Arial", color="black", size=14, face="bold.italic"),
+        axis.title.x=element_text(family="Arial", face="plain", color="black", size=14),
+        axis.title.y=element_text(family="Arial", face="plain", color="black", size=14),
+        legend.title = element_text(family="Arial", face="bold", colour="black", size=10),
+        axis.text.x=element_blank(),
+        panel.margin=unit(0.05, "lines"),
+        panel.border = element_rect(color="black",fill=NA,size=1), 
+        strip.background = element_rect(color="black",fill="white",size=1),
+        axis.text.y=element_text(family="Arial", face="bold", color="black", size=8),
+        panel.background=element_rect(fill="white"),
+        panel.grid.major=element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.ticks=element_blank()) +
+  facet_wrap(~Campaign)
+
+```
+
+### **6. Summary & Recommendations** 
+
+**6.1: Interesting Insights:**
+
+1. Consumer spending in Campaign A seems to be highest if consumers are married, have a household size of 2 to 3, earn somewhere between $50-99k, and who purchase heavily in both holiday and non-holiday season.
+
+2. The important product segments is Meat, Milk & Frozen Items with highest sales. These products have exhibited tremendous sales in both the duration of when the campaign A was active vs. inactive and also during the holiday season vs. non-holiday season.
+
+3. Mean EPH of 0.3 and higher for a promotion is considered to be a "successful promotion". We experienced a mean of 0.53 for Campaign A and 0.13 of mean EPH when campaign A was not running.
+
+**6.2: Recommendations**
+
+Few recommended actions to boost short-term sales during promotion periods are listed below:
+
+**1. To maximize customer response:**\
+Collect data from existing members for a certain time period, determine customer-to-promotion category match for individual customers, and send single offers accordingly.
+
+**2. To predict new customer behavior**\
+Additional data (e.g., occupation, education level, location) might be requested in the profile section, when a new customer signs up to be a Regork to test for possible features that might contribute to a customer-to-promotion match.
+
+**3. To maximize success rate of Campaign A:**\
+- Send single offers via social networks and mobile app.\
+- Offer discount and BOGO promotions with low purchase requirement.
